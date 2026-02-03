@@ -13,6 +13,18 @@ typedef struct {
     int     extensions_count;
 } ParsedArgs;
 
+void cleanup_files_list(ListFiles* list) {
+    for (int i = 0; i < list->count; ++i) {
+        free(list->file_contents[i]);
+        free(list->files[i]);
+    }
+
+    list->file_sizes = NULL;
+    list->capacity = 0;
+    list->count = 0;
+    list->extensions_count = 0;
+}       
+
 void cleanup_parsed_args(ParsedArgs* args) {
     if (args->project_dir) {
         free(args->project_dir);
@@ -116,6 +128,8 @@ int main(int argc, char* argv[]) {
 
     ListFiles list_files = {
         .files = malloc(16 * sizeof(char*)),
+        .file_contents = malloc(4096 * sizeof(char*)),
+        .file_sizes = malloc(4096 * sizeof(char*)),
         .extensions = parsed_args.extensions,
         .extensions_count = parsed_args.extensions_count,
         .count = 0,
@@ -124,12 +138,16 @@ int main(int argc, char* argv[]) {
 
     char** files = collect_project_files(parsed_args.project_dir, &list_files);
 
-    printf("Найдены файлы:\n")
+    printf("\nНайдены файлы:\n");
     for (int i = 0; i < list_files.count; ++i) {
-        printf("%s\n", files[i]);
+        printf("Файл: %s\n", files[i]);
+        printf("Размер: %d байт\n", list_files.file_sizes[i]);
     }
 
+    printf("\n");
+
     cleanup_parsed_args(&parsed_args);
+    cleanup_files_list(&list_files);
 
     return 0;
 }
