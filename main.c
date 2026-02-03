@@ -17,8 +17,9 @@ void cleanup_files_list(ListFiles* list) {
     for (int i = 0; i < list->count; ++i) {
         free(list->file_contents[i]);
         free(list->files[i]);
+        free(list->file_paths[i]);
     }
-
+    
     list->file_sizes = NULL;
     list->capacity = 0;
     list->count = 0;
@@ -128,8 +129,9 @@ int main(int argc, char* argv[]) {
 
     ListFiles list_files = {
         .files = malloc(16 * sizeof(char*)),
-        .file_contents = malloc(4096 * sizeof(char*)),
-        .file_sizes = malloc(4096 * sizeof(char*)),
+        .file_contents = malloc(16 * sizeof(char*)),
+        .file_paths = malloc(16 * sizeof(char*)),
+        .file_sizes = malloc(16 * sizeof(size_t*)),
         .extensions = parsed_args.extensions,
         .extensions_count = parsed_args.extensions_count,
         .count = 0,
