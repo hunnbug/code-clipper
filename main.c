@@ -1,9 +1,9 @@
 #include "utils.h"
 #include "errors.h"
+#include "files.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
-#include "errno.h"
 
 typedef struct {
     char**  extensions;
@@ -112,6 +112,21 @@ int main(int argc, char* argv[]) {
             printf("%s ", parsed_args.extensions[i]);
         }
         printf("\n");
+    }
+
+    ListFiles list_files = {
+        .files = malloc(16 * sizeof(char*)),
+        .extensions = parsed_args.extensions,
+        .extensions_count = parsed_args.extensions_count,
+        .count = 0,
+        .capacity = 16
+    };
+
+    char** files = collect_project_files(parsed_args.project_dir, &list_files);
+
+    printf("Найдены файлы:\n")
+    for (int i = 0; i < list_files.count; ++i) {
+        printf("%s\n", files[i]);
     }
 
     cleanup_parsed_args(&parsed_args);
