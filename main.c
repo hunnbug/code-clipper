@@ -2,14 +2,32 @@
 #include "errors.h"
 #include "stdbool.h"
 #include "stdio.h"
+#include "stdlib.h"
+#include "errno.h"
 
 typedef struct {
     char**  extensions;
     char*   project_dir;
     bool    parse_exts;
     int     first_ext_idx;
-    int     num_of_extensions;
+    int     extensions_count;
 } ParsedArgs;
+
+void cleanup_parsed_args(ParsedArgs* args) {
+    if (args->project_dir) {
+        free(args->project_dir);
+        args->project_dir = NULL;
+    }
+
+    if (args->extensions) {
+        free(args->extensions);
+        args->extensions = NULL;
+    }
+
+    args->extensions_count = 0;
+    args->parse_exts = false;
+    args->first_ext_idx = 0;
+}
 
 int main(int argc, char* argv[]) {
 
@@ -21,27 +39,41 @@ int main(int argc, char* argv[]) {
     bool first_is_dir = is_directory(argv[1]);
     bool first_is_ext = is_file_extension(argv[1]);
     
-    ParsedArgs parsed_args;
+    ParsedArgs parsed_args = {
+        .extensions = NULL,
+        .project_dir = NULL,
+        .parse_exts = false,
+        .first_ext_idx = 0,
+        .extensions_count = 0
+    };
+
+    for (int i = 2; i < argc; ++i) {
+        if (is_directory(argv[i])) {
+            errno = 0;
+            PRINT_USAGE_ERROR(argv[i]);
+            return 1;
+        }
+    }
 
     if (first_is_ext) {
         
-        parsed_args.num_of_extensions = argc - 1;
-
         if (get_current_path() != NULL) {
             parsed_args.project_dir = get_current_path();
         } else {
-            perror("Произошла непредвиденная ошибка при получении пути к проекту, приносим свои извинения.\n");
+            PRINT_USAGE_ERROR("Ошибка при получении пути проекта");
             return 1;
         }
 
         parsed_args.first_ext_idx = 1;
         parsed_args.parse_exts = true;
+        parsed_args.extensions_count = argc - 1;
 
     } else if (first_is_dir) {
 
         if (argc > 2) {
-            parsed_args.num_of_extensions = argc - 2;
             parsed_args.first_ext_idx = 2;
+            parsed_args.parse_exts = true;
+            parsed_args.extensions_count = argc - 2;
         } else {
             parsed_args.parse_exts = false;
         }
@@ -49,7 +81,7 @@ int main(int argc, char* argv[]) {
         if (get_absolute_path(argv[1]) != NULL) {
             parsed_args.project_dir = get_absolute_path(argv[1]);
         } else {
-            perror("Произошла непредвиденная ошибка при получении пути к проекту, приносим свои извинения.\n"); // сделать макрос с errno
+            PRINT_USAGE_ERROR("Ошибка при получении пути проекта");
             return 1;
         }
 
@@ -59,6 +91,30 @@ int main(int argc, char* argv[]) {
     }
 
     printf("В качестве директории проекта используется %s.\n", parsed_args.project_dir);
+
+    if (parsed_args.parse_exts) {
+        parsed_args.extensions = malloc(parsed_args.extensions_count * sizeof(char*));
+        int extensions_idx = 0;
+        for (int i = parsed_args.first_ext_idx; i < argc; ++i) {
+            if (!is_file_extension(argv[i])) {
+                PRINT_USAGE_ERROR(argv[i]);
+                cleanup_parsed_args(&parsed_args);
+                return 1;
+            } else {
+                parsed_args.extensions[extensions_idx++] = argv[i];
+            }
+        }
+    }
+
+    if (parsed_args.extensions_count > 0 && parsed_args.extensions != NULL) {
+        printf("Используем в работе расширения: ");
+        for (int i = 0; i < parsed_args.extensions_count; ++i) {
+            printf("%s ", parsed_args.extensions[i]);
+        }
+        printf("\n");
+    }
+
+    cleanup_parsed_args(&parsed_args);
 
     return 0;
 }
