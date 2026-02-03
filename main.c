@@ -2,12 +2,13 @@
 #include "errors.h"
 #include "stdbool.h"
 #include "stdio.h"
-#include "limits.h"
 
 typedef struct {
-    char* project_dir;
-    bool parse_exts;
-    int first_ext_idx;
+    char**  extensions;
+    char*   project_dir;
+    bool    parse_exts;
+    int     first_ext_idx;
+    int     num_of_extensions;
 } ParsedArgs;
 
 int main(int argc, char* argv[]) {
@@ -17,59 +18,47 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    bool first_is_ext = is_file_extension(argv[1]);
     bool first_is_dir = is_directory(argv[1]);
-
-    int num_of_extensions;
-    char work_directory;
-
+    bool first_is_ext = is_file_extension(argv[1]);
+    
     ParsedArgs parsed_args;
 
     if (first_is_ext) {
-
-        num_of_extensions = argc - 1;
-
-        // for (int i = 1; i < argc; ++i) {
-        //     if (!is_file_extension(argv[i])) {
-        //         PRINT_USAGE_ERROR(argv[i]);
-        //         return 1;
-        //     }
-        // }
         
-        char cwd[PATH_MAX];
-        get_current_path(cwd);
-       
-        if (cwd != NULL) {
-            parsed_args.project_dir = cwd;
+        parsed_args.num_of_extensions = argc - 1;
+
+        if (get_current_path() != NULL) {
+            parsed_args.project_dir = get_current_path();
         } else {
-            perror("Произошла непредвиденная ошибка, просим прощения");
-            return 2;
+            perror("Произошла непредвиденная ошибка при получении пути к проекту, приносим свои извинения.\n");
+            return 1;
         }
 
         parsed_args.first_ext_idx = 1;
-
-        printf("В качестве директории проекта используется %s.\n", cwd);
+        parsed_args.parse_exts = true;
 
     } else if (first_is_dir) {
 
         if (argc > 2) {
-            num_of_extensions = argc - 2;
+            parsed_args.num_of_extensions = argc - 2;
             parsed_args.first_ext_idx = 2;
         } else {
             parsed_args.parse_exts = false;
         }
-
-        parsed_args.project_dir = argv[1];
-
-        printf("В качестве директории проекта используется %s.", argv[1]); // переделать на абсолютный путь
-
+        
+        if (get_absolute_path(argv[1]) != NULL) {
+            parsed_args.project_dir = get_absolute_path(argv[1]);
+        } else {
+            perror("Произошла непредвиденная ошибка при получении пути к проекту, приносим свои извинения.\n"); // сделать макрос с errno
+            return 1;
+        }
 
     } else {
-        
         PRINT_USAGE_ERROR(argv[1]);
-        return 1;
-                                                                                   
+        return 1; 
     }
+
+    printf("В качестве директории проекта используется %s.\n", parsed_args.project_dir);
 
     return 0;
 }

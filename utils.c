@@ -5,6 +5,8 @@
 #include "stddef.h"
 #include "stdio.h"
 #include "unistd.h"
+#include "limits.h"
+#include "stdlib.h"
 
 bool is_directory(const char* path) {
     struct stat statbuf;
@@ -31,7 +33,7 @@ bool is_file_extension(const char* filename) {
     }
 
     for (size_t i = 1; i < len; ++i) {
-        if (!isprint((unsigned char)filename[i]) || filename[i] == ' ') {
+        if (!isprint((unsigned char)filename[i]) || filename[i] == ' ' || filename[i] == '\\' || filename[i] == '/') {
             return false;
         }
     }
@@ -39,6 +41,10 @@ bool is_file_extension(const char* filename) {
     return true;
 }
 
-char* get_current_path(char cwd[]) {
-    return getcwd(cwd, sizeof(cwd)); 
+char* get_current_path() {
+    return getcwd(NULL, 0); 
+}
+
+char* get_absolute_path(const char* path) {
+    return realpath(path, NULL);
 }
