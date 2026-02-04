@@ -1,6 +1,8 @@
 #define _XOPEN_SOURCE 500
+#define _GNU_SOURCE
 #include "stddef.h"
 #include "ftw.h"
+#include "sys/stat.h"
 #include "files.h"
 #include "string.h"
 #include "stdlib.h"
@@ -10,10 +12,11 @@
 static ListFiles* global_files_list = NULL;
 
 bool has_extension(const char* file_name) {
-    if (global_files_list->extensions_count == 0) return true;
 
     const char* ext = strrchr(file_name, '.');
     if (!ext) return false;
+
+    if (global_files_list->extensions_count == 0) return true;
 
     for (int i = 0; i < global_files_list->extensions_count; ++i) {
         if (strcmp(ext, global_files_list->extensions[i]) == 0) return true;
@@ -32,6 +35,11 @@ char* read_file_content(const char* full_path, size_t* out_size) {
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
+
+    if (file_size < 0) {
+        fclose(file);
+        return NULL;
+    }
 
     char* content = malloc(file_size + 1);
     if (!content) {
@@ -58,13 +66,30 @@ char* read_file_content(const char* full_path, size_t* out_size) {
 int collect_file(const char* fpath, const struct stat* sb,
                  int typeflag, struct FTW* ftwbuf) {
 
-    if (typeflag != FTW_F) return 0;
+    if (typeflag == FTW_SL || typeflag == FTW_SLN) return 0;
+
+    if (typeflag == FTW_D || typeflag == FTW_DP) {
+        const char* dir_name = strrchr(fpath, '/');
+        if (dir_name == NULL) dir_name = fpath;
+        else dir_name++;
+        
+        if (dir_name[0] == '.' && strcmp(dir_name, ".") != 0 && strcmp(dir_name, "..") != 0) {
+            return FTW_SKIP_SUBTREE; 
+        }
+        return 0;
+    }
+
+    if (!S_ISREG(sb->st_mode)) return 0;
 
     const char* file_name = strrchr(fpath, '/'); 
     if (file_name == NULL) file_name = fpath;
     else file_name++;
 
-    if (!has_extension(file_name)) return false;
+    if (file_name[0] == '.') {
+        return 0;
+    }
+
+    if (!has_extension(file_name)) return 0;
 
     if (global_files_list->count >= global_files_list->capacity) {
         
@@ -74,26 +99,44 @@ int collect_file(const char* fpath, const struct stat* sb,
         char** new_file_paths = realloc(global_files_list->file_paths, global_files_list->capacity * sizeof(char*));
         size_t* new_sizes = realloc(global_files_list->file_sizes, global_files_list->capacity * sizeof(size_t));
 
-        if (!new_files || !new_contents || !new_sizes) {
-            perror("realloc");
+        if (!new_files || !new_contents || !new_sizes || !new_file_paths) {
+            perror("пиздец!");
+            free(new_files);
+            free(new_contents);
+            free(new_sizes);
+            free(new_file_paths);
             return -1;
         }
 
         global_files_list->files = new_files;
+        global_files_list->file_paths = new_file_paths;
         global_files_list->file_contents = new_contents;
         global_files_list->file_sizes = new_sizes;
-    }   
 
-    global_files_list->files[global_files_list->count] = strdup(file_name);
+    }   
 
     size_t content_size;
     char* content = read_file_content(fpath, &content_size);
-    if (!content) return -1;
+    if (!content) {
+        fprintf(stderr, "не удалось прочитать файл %s\n", fpath);
+        free(content);
+        return 0;
+    }
 
-    // В душе не ебу почему, но без этого пути были обрезаны до файла
-    char* file_path = malloc(strlen(fpath) * sizeof(char) + 1);
-    strcpy(file_path, fpath);
+    char* file_path = strdup(fpath);
+    if (!file_path) {
+        free(content);
+        return 0;
+    }
 
+    char* name_copy = strdup(file_name);
+    if (!name_copy) {
+        free(file_path);
+        free(content);
+        return 0;
+    }
+
+    global_files_list->files[global_files_list->count] = name_copy;
     global_files_list->file_contents[global_files_list->count] = content;
     global_files_list->file_sizes[global_files_list->count] = content_size;
     global_files_list->file_paths[global_files_list->count] = file_path;
@@ -123,15 +166,16 @@ void copy_file_contents_to_clipboard(ListFiles* list) {
 
     fclose(temp);
 
-    system("cat /tmp/cclipper_content.txt | xclip -selection clipboard");
+    system("cat /tmp/cclipper_content | xclip -selection clipboard");
     
-    remove("/tmp/cclipper_content.txt");
+    remove("/tmp/cclipper_content");
 }
 
 char** collect_project_files(const char* project_dir, ListFiles* files_list) {
     global_files_list = files_list;
+    int flags = FTW_PHYS | FTW_ACTIONRETVAL;
 
-    nftw(project_dir, collect_file, 20, FTW_F);
+    nftw(project_dir, collect_file, 20, flags);
 
     copy_file_contents_to_clipboard(files_list);
 

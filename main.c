@@ -15,15 +15,26 @@ typedef struct {
 
 void cleanup_files_list(ListFiles* list) {
     for (int i = 0; i < list->count; ++i) {
-        free(list->file_contents[i]);
-        free(list->files[i]);
-        free(list->file_paths[i]);
+        if (list->file_contents[i]) free(list->file_contents[i]);
+        if (list->files[i]) free(list->files[i]);
+        if (list->file_paths[i]) free(list->file_paths[i]);
     }
+
+    if (list->file_contents) free(list->file_contents);
+    if (list->files) free(list->files);
+    if (list->file_paths) free(list->file_paths); 
+    if (list->file_sizes) free(list->file_sizes);
+
     
+    list->files = NULL;
+    list->file_contents = NULL;
+    list->file_paths = NULL;
     list->file_sizes = NULL;
-    list->capacity = 0;
     list->count = 0;
+    list->capacity = 0;
     list->extensions_count = 0;
+
+
 }       
 
 void cleanup_parsed_args(ParsedArgs* args) {
@@ -120,7 +131,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (parsed_args.extensions_count > 0 && parsed_args.extensions != NULL) {
-        printf("Используем в работе расширения: ");
+        printf("Ищем расширения: ");
         for (int i = 0; i < parsed_args.extensions_count; ++i) {
             printf("%s ", parsed_args.extensions[i]);
         }
@@ -128,25 +139,24 @@ int main(int argc, char* argv[]) {
     }
 
     ListFiles list_files = {
-        .files = malloc(16 * sizeof(char*)),
-        .file_contents = malloc(16 * sizeof(char*)),
-        .file_paths = malloc(16 * sizeof(char*)),
-        .file_sizes = malloc(16 * sizeof(size_t*)),
+        .files = malloc(512 * sizeof(char*)),
+        .file_contents = malloc(512 * sizeof(char*)),
+        .file_paths = malloc(512 * sizeof(char*)),
+        .file_sizes = malloc(512 * sizeof(size_t)),
         .extensions = parsed_args.extensions,
         .extensions_count = parsed_args.extensions_count,
         .count = 0,
-        .capacity = 16
+        .capacity = 512 
     };
 
     char** files = collect_project_files(parsed_args.project_dir, &list_files);
 
     printf("\nНайдены файлы:\n");
     for (int i = 0; i < list_files.count; ++i) {
-        printf("Файл: %s\n", files[i]);
-        printf("Размер: %d байт\n", list_files.file_sizes[i]);
+        printf(" | %s %d байт\n", files[i], list_files.file_sizes[i]);
     }
 
-    printf("\n");
+    printf("\nВсего прочитано и скопировано: %d файлов\n", list_files.count);
 
     cleanup_parsed_args(&parsed_args);
     cleanup_files_list(&list_files);
