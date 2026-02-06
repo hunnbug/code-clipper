@@ -123,24 +123,29 @@ int collect_file(const char* fpath, const struct stat* sb,
         return 0;
     }
 
-    char* file_path = strdup(fpath);
-    if (!file_path) {
+    char* file_path_copy = strdup(fpath);
+    if (!file_path_copy) {
         free(content);
         return 0;
     }
 
-    char* name_copy = strdup(file_name);
-    if (!name_copy) {
-        free(file_path);
+    char* file_name_copy = strdup(file_name);
+    if (!file_name_copy) {
+        free(file_path_copy);
         free(content);
         return 0;
     }
 
-    global_files_list->files[global_files_list->count] = name_copy;
+    global_files_list->files[global_files_list->count] = file_name_copy;
     global_files_list->file_contents[global_files_list->count] = content;
     global_files_list->file_sizes[global_files_list->count] = content_size;
-    global_files_list->file_paths[global_files_list->count] = file_path;
+    global_files_list->file_paths[global_files_list->count] = file_path_copy;
     global_files_list->count++;
+
+    free(file_path_copy);
+    free(file_name_copy);
+    file_name_copy = NULL;
+    file_path_copy = NULL;
 
     return 0;
 }
