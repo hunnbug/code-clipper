@@ -4,9 +4,9 @@
 #include "ctype.h"
 #include "stddef.h"
 #include "stdio.h"
-#include "unistd.h"
 #include "limits.h"
 #include "stdlib.h"
+#include "types.h"
 
 bool is_directory(const char* path) {
     struct stat statbuf;
@@ -41,10 +41,47 @@ bool is_file_extension(const char* filename) {
     return true;
 }
 
-char* get_current_path() {
-    return getcwd(NULL, 0); 
-}
-
 char* get_absolute_path(const char* path) {
     return realpath(path, NULL);
 }
+
+void cleanup_files_list(ListFiles* list) {
+    for (int i = 0; i < list->count; ++i) {
+        if (list->file_contents[i]) free(list->file_contents[i]);
+        if (list->files[i]) free(list->files[i]);
+        if (list->file_paths[i]) free(list->file_paths[i]);
+    }
+
+    if (list->file_contents) free(list->file_contents);
+    if (list->files) free(list->files);
+    if (list->file_paths) free(list->file_paths); 
+    if (list->file_sizes) free(list->file_sizes);
+
+    
+    list->files = NULL;
+    list->file_contents = NULL;
+    list->file_paths = NULL;
+    list->file_sizes = NULL;
+    list->count = 0;
+    list->capacity = 0;
+    list->extensions_count = 0;
+
+
+}       
+
+void cleanup_parsed_args(ParsedArgs* args) {
+    if (args->project_dir) {
+        free(args->project_dir);
+        args->project_dir = NULL;
+    }
+
+    if (args->extensions) {
+        free(args->extensions);
+        args->extensions = NULL;
+    }
+
+    args->extensions_count = 0;
+    args->parse_exts = false;
+    args->first_ext_idx = 0;
+}
+

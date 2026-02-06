@@ -3,11 +3,11 @@
 #include "stddef.h"
 #include "ftw.h"
 #include "sys/stat.h"
-#include "files.h"
 #include "string.h"
 #include "stdlib.h"
 #include "stdbool.h"
 #include "stdio.h"
+#include "types.h"
 
 static ListFiles* global_files_list = NULL;
 
@@ -141,11 +141,6 @@ int collect_file(const char* fpath, const struct stat* sb,
     global_files_list->file_sizes[global_files_list->count] = content_size;
     global_files_list->file_paths[global_files_list->count] = file_path_copy;
     global_files_list->count++;
-
-    free(file_path_copy);
-    free(file_name_copy);
-    file_name_copy = NULL;
-    file_path_copy = NULL;
 
     return 0;
 }

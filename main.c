@@ -1,57 +1,10 @@
 #include "utils.h"
-#include "errors.h"
 #include "files.h"
+#include "errors.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
-
-typedef struct {
-    char**  extensions;
-    char*   project_dir;
-    bool    parse_exts;
-    int     first_ext_idx;
-    int     extensions_count;
-} ParsedArgs;
-
-void cleanup_files_list(ListFiles* list) {
-    for (int i = 0; i < list->count; ++i) {
-        if (list->file_contents[i]) free(list->file_contents[i]);
-        if (list->files[i]) free(list->files[i]);
-        if (list->file_paths[i]) free(list->file_paths[i]);
-    }
-
-    if (list->file_contents) free(list->file_contents);
-    if (list->files) free(list->files);
-    if (list->file_paths) free(list->file_paths); 
-    if (list->file_sizes) free(list->file_sizes);
-
-    
-    list->files = NULL;
-    list->file_contents = NULL;
-    list->file_paths = NULL;
-    list->file_sizes = NULL;
-    list->count = 0;
-    list->capacity = 0;
-    list->extensions_count = 0;
-
-
-}       
-
-void cleanup_parsed_args(ParsedArgs* args) {
-    if (args->project_dir) {
-        free(args->project_dir);
-        args->project_dir = NULL;
-    }
-
-    if (args->extensions) {
-        free(args->extensions);
-        args->extensions = NULL;
-    }
-
-    args->extensions_count = 0;
-    args->parse_exts = false;
-    args->first_ext_idx = 0;
-}
+#include "unistd.h"
 
 int main(int argc, char* argv[]) {
 
@@ -81,12 +34,7 @@ int main(int argc, char* argv[]) {
 
     if (first_is_ext) {
         
-        if (get_current_path() != NULL) {
-            parsed_args.project_dir = get_current_path();
-        } else {
-            PRINT_USAGE_ERROR("Ошибка при получении пути проекта");
-            return 1;
-        }
+        parsed_args.project_dir = getcwd(NULL, 0); 
 
         parsed_args.first_ext_idx = 1;
         parsed_args.parse_exts = true;
