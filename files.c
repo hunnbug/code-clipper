@@ -10,6 +10,7 @@
 #include "types.h"
 
 static ListFiles* global_files_list = NULL;
+static FILE* temp = NULL;
 
 bool has_extension(const char* file_name) {
 
@@ -95,14 +96,12 @@ int collect_file(const char* fpath, const struct stat* sb,
         
         global_files_list->capacity *= 2;
         char** new_files = realloc(global_files_list->files, global_files_list->capacity * sizeof(char*));
-        char** new_contents = realloc(global_files_list->file_contents, global_files_list->capacity * sizeof(char*));
         char** new_file_paths = realloc(global_files_list->file_paths, global_files_list->capacity * sizeof(char*));
         size_t* new_sizes = realloc(global_files_list->file_sizes, global_files_list->capacity * sizeof(size_t));
 
-        if (!new_files || !new_contents || !new_sizes || !new_file_paths) {
+        if (!new_files || !new_sizes || !new_file_paths) {
             perror("пиздец!");
             free(new_files);
-            free(new_contents);
             free(new_sizes);
             free(new_file_paths);
             return -1;
@@ -110,7 +109,6 @@ int collect_file(const char* fpath, const struct stat* sb,
 
         global_files_list->files = new_files;
         global_files_list->file_paths = new_file_paths;
-        global_files_list->file_contents = new_contents;
         global_files_list->file_sizes = new_sizes;
 
     }   
@@ -137,47 +135,37 @@ int collect_file(const char* fpath, const struct stat* sb,
     }
 
     global_files_list->files[global_files_list->count] = file_name_copy;
-    global_files_list->file_contents[global_files_list->count] = content;
     global_files_list->file_sizes[global_files_list->count] = content_size;
     global_files_list->file_paths[global_files_list->count] = file_path_copy;
     global_files_list->count++;
 
+    fprintf(temp, "Файл: %s\n", file_path_copy);
+
+    if (fputs(content, temp) == EOF) fprintf(stderr, "Произошла ошибка при открытии файла %s", file_name_copy);
+
+    fprintf(temp, "\n\n");
+
+
     return 0;
-}
-
-void copy_file_contents_to_clipboard(ListFiles* list) {
-    if (list->count == 0) {
-        return;
-    }
-
-    FILE* temp = fopen("/tmp/cclipper_content", "w");
-    if (!temp) {
-        perror("Не удалось создать временный файл\n");
-        return;
-    }
-
-    for (int i = 0; i < list->count; ++i) {
-        fprintf(temp, "Файл: %s\n", list->file_paths[i]);
-
-        if (fputs(list->file_contents[i], temp) == EOF) fprintf(stderr, "Произошла ошибка при открытии файла %s", list->files[i]);
-
-        fprintf(temp, "\n\n");
-    }
-
-    fclose(temp);
-
-    system("cat /tmp/cclipper_content | xclip -selection clipboard");
-    
-    remove("/tmp/cclipper_content");
 }
 
 char** collect_project_files(const char* project_dir, ListFiles* files_list) {
     global_files_list = files_list;
     int flags = FTW_PHYS | FTW_ACTIONRETVAL;
 
+    temp = fopen("/tmp/cclipper_content", "w");
+    if (!temp) {
+        perror("Не удалось создать временный файл\n");
+        return NULL;
+    }
+
     nftw(project_dir, collect_file, 20, flags);
 
-    copy_file_contents_to_clipboard(files_list);
+    fclose(temp);
+
+    system("cat /tmp/cclipper_content | xclip -selection clipboard");
+    
+    remove("/tmp/cclipper_content");
 
     return files_list->files;
 

@@ -88,7 +88,6 @@ int main(int argc, char* argv[]) {
 
     ListFiles list_files = {
         .files = malloc(512 * sizeof(char*)),
-        .file_contents = malloc(512 * sizeof(char*)),
         .file_paths = malloc(512 * sizeof(char*)),
         .file_sizes = malloc(512 * sizeof(size_t)),
         .extensions = parsed_args.extensions,
@@ -98,6 +97,9 @@ int main(int argc, char* argv[]) {
     };
 
     char** files = collect_project_files(parsed_args.project_dir, &list_files);
+    if (!files) {
+        return 1;
+    }
 
     printf("\nНайдены файлы:\n");
     for (int i = 0; i < list_files.count; ++i) {
