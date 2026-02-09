@@ -1,8 +1,6 @@
+#pragma once
 #include "stddef.h"
 #include "stdbool.h"
-
-#ifndef TYPES_HEADER_H_INCLUDED
-#define TYPES_HEADER_H_INCLUDED
 
 typedef struct {
     char**  extensions;
@@ -22,4 +20,3 @@ typedef struct {
     int         capacity;
 } ListFiles;
 
-#endif
