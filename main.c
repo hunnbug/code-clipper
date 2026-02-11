@@ -88,7 +88,6 @@ int main(int argc, char* argv[]) {
 
     ListFiles list_files = {
         .files = malloc(512 * sizeof(char*)),
-        .file_paths = malloc(512 * sizeof(char*)),
         .file_sizes = malloc(512 * sizeof(size_t)),
         .extensions = parsed_args.extensions,
         .extensions_count = parsed_args.extensions_count,

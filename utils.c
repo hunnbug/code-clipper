@@ -48,16 +48,13 @@ char* get_absolute_path(const char* path) {
 void cleanup_files_list(ListFiles* list) {
     for (int i = 0; i < list->count; ++i) {
         if (list->files[i]) free(list->files[i]);
-        if (list->file_paths[i]) free(list->file_paths[i]);
     }
 
     if (list->files) free(list->files);
-    if (list->file_paths) free(list->file_paths); 
     if (list->file_sizes) free(list->file_sizes);
 
     
     list->files = NULL;
-    list->file_paths = NULL;
     list->file_sizes = NULL;
     list->count = 0;
     list->capacity = 0;

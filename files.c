@@ -25,12 +25,12 @@ bool has_extension(const char* file_name) {
     return false;
 }
 
-char* read_file_content(const char* full_path, size_t* out_size) {
+size_t read_file_content(const char* full_path) {
 
     FILE* file = fopen(full_path, "rb");
     if (!file) {
         perror("Произошла ошибка при открытии файла");
-        return NULL;
+        return -1;
     }
 
     fseek(file, 0, SEEK_END);
@@ -39,28 +39,35 @@ char* read_file_content(const char* full_path, size_t* out_size) {
 
     if (file_size < 0) {
         fclose(file);
-        return NULL;
+        return -1;
     }
 
     char* content = malloc(file_size + 1);
     if (!content) {
         perror("malloc");
+        free(content);
         fclose(file);
-        return NULL;
+        return -1;
     }
 
     size_t bytes_read = fread(content, 1, file_size, file);
     if (bytes_read != file_size) {
         perror("fread");
-        free(content);
         fclose(file);
-        return NULL;
+        return -1;
     }
 
     content[file_size] = '\0';
-    *out_size = file_size;
+
+    fprintf(temp, "Файл: %s\n", full_path);
+
+    if (fputs(content, temp) == EOF) fprintf(stderr, "Произошла ошибка при открытии файла %s", full_path);
+
+    fprintf(temp, "\n\n");
+
     fclose(file);
-    return content;
+    free(content);
+    return file_size;
 }
 
 
@@ -96,54 +103,30 @@ int collect_file(const char* fpath, const struct stat* sb,
         
         global_files_list->capacity *= 2;
         char** new_files = realloc(global_files_list->files, global_files_list->capacity * sizeof(char*));
-        char** new_file_paths = realloc(global_files_list->file_paths, global_files_list->capacity * sizeof(char*));
         size_t* new_sizes = realloc(global_files_list->file_sizes, global_files_list->capacity * sizeof(size_t));
 
-        if (!new_files || !new_sizes || !new_file_paths) {
+        if (!new_files || !new_sizes/* || !new_file_paths */) {
             perror("пиздец!");
             free(new_files);
             free(new_sizes);
-            free(new_file_paths);
             return -1;
         }
 
         global_files_list->files = new_files;
-        global_files_list->file_paths = new_file_paths;
         global_files_list->file_sizes = new_sizes;
 
     }   
 
-    size_t content_size;
-    char* content = read_file_content(fpath, &content_size);
-    if (!content) {
-        fprintf(stderr, "не удалось прочитать файл %s\n", fpath);
-        free(content);
-        return 0;
-    }
-
-    char* file_path_copy = strdup(fpath);
-    if (!file_path_copy) {
-        free(content);
-        return 0;
-    }
-
     char* file_name_copy = strdup(file_name);
     if (!file_name_copy) {
-        free(file_path_copy);
-        free(content);
         return 0;
     }
+
+    size_t content_size = read_file_content(fpath);
 
     global_files_list->files[global_files_list->count] = file_name_copy;
     global_files_list->file_sizes[global_files_list->count] = content_size;
-    global_files_list->file_paths[global_files_list->count] = file_path_copy;
     global_files_list->count++;
-
-    fprintf(temp, "Файл: %s\n", file_path_copy);
-
-    if (fputs(content, temp) == EOF) fprintf(stderr, "Произошла ошибка при открытии файла %s", file_name_copy);
-
-    fprintf(temp, "\n\n");
 
 
     return 0;

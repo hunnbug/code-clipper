@@ -13,7 +13,6 @@ typedef struct {
 typedef struct {
     char**      files;
     char**      extensions;
-    char**      file_paths;
     size_t*     file_sizes;
     int         extensions_count;
     int         count;
