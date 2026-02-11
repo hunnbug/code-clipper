@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
 
     printf("\nНайдены файлы:\n");
     for (int i = 0; i < list_files.count; ++i) {
-        printf(" | %s %d байт\n", files[i], list_files.file_sizes[i]);
+        printf(" | %s %d байт\n", list_files.files[i], list_files.file_sizes[i]);
     }
 
     printf("\nВсего прочитано и скопировано: %d файлов\n", list_files.count);

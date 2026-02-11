@@ -128,7 +128,6 @@ int collect_file(const char* fpath, const struct stat* sb,
     global_files_list->file_sizes[global_files_list->count] = content_size;
     global_files_list->count++;
 
-
     return 0;
 }
 
